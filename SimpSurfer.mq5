@@ -142,7 +142,7 @@ void OnTick()
    
    
    
-   prev_Price = curr_Price;
+   prev_Price = curr_Price; 
   }
 //+------------------------------------------------------------------+
 
