@@ -17,6 +17,9 @@
 input
 double Lots = 1;
 
+input bool enableSell = true; // Enable short transactions
+input bool enableBuy = true;  // Enable long transactions
+
 input 
 bool CalculateInNewBar = false;
 
@@ -44,7 +47,7 @@ input int NOPSchedulerTo;                   // Not operation Scheduler: To
 // Test Configure
 input bool testingMode = true;   // Testing Mode
 
-input MODE_OPERATION ModeOperation = PRICE_LEVEL;  // Mode Operation
+input MODE_OPERATION ModeOperation = TIME;  // Mode Operation
 input int countBarsTimeTest = 5;                   // Number of bars for time test
 
 
@@ -55,6 +58,7 @@ input int countBarsTimeTest = 5;                   // Number of bars for time te
 
 double prev_Price;
 double curr_Price;
+int TimeElapsed;
 MqlDateTime dt_struct;
 Testing test;
 NotOperateHour NotOperationScheduler;
@@ -118,6 +122,7 @@ int OnInit()
     
     prev_Price = 0;
     curr_Price = 0;
+    TimeElapsed = 0;
   
    return(INIT_SUCCEEDED);
 }
@@ -140,14 +145,55 @@ void OnTick()
    curr_Price = _ClosesBuffer_P1[0];
    if(prev_Price == 0) prev_Price = curr_Price;
    
-   if(CheckBuyConditions()) printf("buy conditions");
+   bool newbar = isNewBar();
    
-   if(CheckSellConditions()) printf("sell conditions");
+   if (newbar)
+   {
+      if(ModeOperation == TIME)
+      {
+         if(test.openedPosition) test.TimeElapsed++;
+         if(PositionsTotal() > 0) TimeElapsed++;
+         
+         if(PositionsTotal() > 0 && TimeElapsed >= countBarsTimeTest)
+         {
+            CloseAllPositions();
+            TimeElapsed = 0;
+         }
+      }
+   }
+     
+   
+   if(test.openedPosition) test.ValidatePositions(curr_Price);
+   
+   else if(!test.openedPosition && PositionsTotal() == 0)
+   {
+      if(CheckBuyConditions() && enableBuy) 
+      {
+         //printf("buy conditions");
+         
+         if(testingMode) 
+            test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
+            
+         else SendBuyMarket(curr_Price, Lots);   
+         
+         
+      }
+      
+      if(CheckSellConditions() && enableSell) 
+      {
+         //printf("sell conditions");
+         
+         if(testingMode) 
+            test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
+            
+         else SendSellMarket(curr_Price, Lots);      
+      }
+   }
    
    
    
    prev_Price = curr_Price; 
-  }
+}
 //+------------------------------------------------------------------+
 
 bool CheckBuyConditions()
