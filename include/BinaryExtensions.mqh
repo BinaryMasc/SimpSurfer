@@ -21,7 +21,14 @@ void SendSellMarket(double price, double lots, double TP = 0, double SL = 0) {
     trade.Sell(lots, Symbol(), price, SL, TP, "Executed by BinaryExtensions.");
 }
 
-
+void CloseAllPositions()
+{
+   for(int i=PositionsTotal()-1; i>=0; i--)
+   {
+       ulong ticket=PositionGetTicket(i);
+       trade.PositionClose(ticket);   
+   }  
+}
 
 
 datetime Old_Time;
