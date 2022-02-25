@@ -32,6 +32,10 @@ input bool checkP1AboveEMA = false; // Check if Period 1 closes price is above E
 input bool checkP2AboveEMA = true;  // Check if Period 2 closes price is above EMAs
 input bool checkP3AboveEMA = true;  // Check if Period 3 closes price is above EMAs
 
+input bool openPositionInBound_P1 = true;  // Open position in bound (EMA slow) P1
+input bool openPositionInBound_P2 = true;  // Open position in bound (EMA slow) P2
+input bool openPositionInBound_P3 = false;  // Open position in bound (EMA slow) P3
+
 input bool enableNOPScheduler = false;      // Not operation Scheduler mode
 input int NOPSchedulerFrom;                 // Not operation Scheduler: From
 input int NOPSchedulerTo;                   // Not operation Scheduler: To
@@ -184,8 +188,9 @@ bool CheckBuyConditions()
    if(!trend) return false;
    
    
-   trend = (prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0]) || 
-           (prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0]);
+   trend = ((prev_Price > _EMA_P1_Slow[0] && curr_Price < _EMA_P1_Slow[0]) || !openPositionInBound_P1 || !enablePeriod1) || 
+           ((prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0]) || !openPositionInBound_P2 || !enablePeriod2) ||
+           ((prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0]) || !openPositionInBound_P3 || !enablePeriod3);
            
    return trend;        
    
@@ -233,9 +238,10 @@ bool CheckSellConditions()
    if(!trend) return false;
    
    
-   trend = (prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0]) || 
-           (prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0]);
-           
+   trend = ((prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0]) || !openPositionInBound_P1 || !enablePeriod1) || 
+           ((prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0]) || !openPositionInBound_P2 || !enablePeriod2) ||
+           ((prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0]) || !openPositionInBound_P3 || !enablePeriod3);
+                  
    return trend;        
 }
 
