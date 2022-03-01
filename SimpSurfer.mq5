@@ -286,9 +286,9 @@ bool CheckSellConditions()
    // Lows not touch EMA slow
    for(int i = 0; i < BARS_COUNT_TREND && trend; i++)
    {
-      trend = (!enablePeriod1 || _LowsBuffer_P1[i] < _EMA_P1_Slow[i]) && 
-              (!enablePeriod2 || _LowsBuffer_P2[i] < _EMA_P2_Slow[i]) &&
-              (!enablePeriod3 || _LowsBuffer_P3[i] < _EMA_P3_Slow[i]);
+      trend = (!enablePeriod1 || _HighsBuffer_P1[i] < _EMA_P1_Slow[i]) && 
+              (!enablePeriod2 || _HighsBuffer_P2[i] < _EMA_P2_Slow[i]) &&
+              (!enablePeriod3 || _HighsBuffer_P3[i] < _EMA_P3_Slow[i]);
    }
    
    
