@@ -35,6 +35,10 @@ input bool checkP1AboveEMA = false; // Check if Period 1 closes price is above E
 input bool checkP2AboveEMA = true;  // Check if Period 2 closes price is above EMAs
 input bool checkP3AboveEMA = true;  // Check if Period 3 closes price is above EMAs
 
+input bool checkP1IfNotTouchEMASlow = false;	//	Check if isn't Touch EMA Slow P1
+input bool checkP2IfNotTouchEMASlow = true;	//	Check if isn't Touch EMA Slow P2
+input bool checkP3IfNotTouchEMASlow = true;	//	Check if isn't Touch EMA Slow P3
+
 input bool openPositionInBound_P1 = true;  // Open position in bound (EMA slow) P1
 input bool openPositionInBound_P2 = true;  // Open position in bound (EMA slow) P2
 input bool openPositionInBound_P3 = false;  // Open position in bound (EMA slow) P3
@@ -179,7 +183,7 @@ void OnTick()
    // Check condition for open new position
    else
    {
-      if(CheckBuyConditions() && enableBuy) 
+      if(enableBuy && CheckBuyConditions()) 
       {
          //printf("buy conditions");
          
@@ -191,7 +195,7 @@ void OnTick()
          
       }
       
-      if(CheckSellConditions() && enableSell) 
+      if(enableSell && CheckSellConditions()) 
       {
          //printf("sell conditions");
          
@@ -225,9 +229,9 @@ bool CheckBuyConditions()
    
    for(int i = 0; i < BARS_COUNT_TREND && trend; i++)
    {
-      trend = (!checkP1AboveEMA || _ClosesBuffer_P1[i] > _EMA_P1_Fast[i]) && 
-              (!checkP2AboveEMA || _ClosesBuffer_P2[i] > _EMA_P2_Fast[i]) &&
-              (!checkP3AboveEMA || _ClosesBuffer_P3[i] > _EMA_P3_Fast[i]);
+      trend = (!enablePeriod1 || !checkP1AboveEMA || _ClosesBuffer_P1[i] > _EMA_P1_Fast[i]) && 
+              (!enablePeriod2 || !checkP2AboveEMA || _ClosesBuffer_P2[i] > _EMA_P2_Fast[i]) &&
+              (!enablePeriod3 || !checkP3AboveEMA || _ClosesBuffer_P3[i] > _EMA_P3_Fast[i]);
    }
    
    // Discart              
@@ -236,9 +240,9 @@ bool CheckBuyConditions()
    // Lows not touch EMA slow
    for(int i = 0; i < BARS_COUNT_TREND && trend; i++)
    {
-      trend = (!enablePeriod1 || _LowsBuffer_P1[i] > _EMA_P1_Slow[i]) && 
-              (!enablePeriod2 || _LowsBuffer_P2[i] > _EMA_P2_Slow[i]) &&
-              (!enablePeriod3 || _LowsBuffer_P3[i] > _EMA_P3_Slow[i]);
+      trend = (!enablePeriod1 || !checkP1IfNotTouchEMASlow || _LowsBuffer_P1[i] > _EMA_P1_Slow[i]) && 
+              (!enablePeriod2 || !checkP2IfNotTouchEMASlow ||  _LowsBuffer_P2[i] > _EMA_P2_Slow[i]) &&
+              (!enablePeriod3 || !checkP3IfNotTouchEMASlow ||  _LowsBuffer_P3[i] > _EMA_P3_Slow[i]);
    }
    
    
@@ -262,7 +266,7 @@ bool CheckSellConditions()
 {
    bool trend = true;
    
-   for(int i = 0; i < EMA_BARS_COUNT_TREND && trend; i++)
+   for(int i = 1; i < EMA_BARS_COUNT_TREND && trend; i++)
       trend = (!enablePeriod1 || _EMA_P1_Fast[i] < _EMA_P1_Slow[i]) && 
               (!enablePeriod2 || _EMA_P2_Fast[i] < _EMA_P2_Slow[i]) &&
               (!enablePeriod3 || _EMA_P3_Fast[i] < _EMA_P3_Slow[i]);
@@ -273,22 +277,22 @@ bool CheckSellConditions()
    
    
    
-   for(int i = 0; i < BARS_COUNT_TREND && trend; i++)
+   for(int i = 1; i < BARS_COUNT_TREND && trend; i++)
    {
-      trend = (!checkP1AboveEMA || _ClosesBuffer_P1[i] < _EMA_P1_Fast[i]) && 
-              (!checkP2AboveEMA || _ClosesBuffer_P2[i] < _EMA_P2_Fast[i]) &&
-              (!checkP3AboveEMA || _ClosesBuffer_P3[i] < _EMA_P3_Fast[i]);
+      trend = (!enablePeriod1 || !checkP1AboveEMA || _ClosesBuffer_P1[i] < _EMA_P1_Fast[i]) && 
+              (!enablePeriod2 || !checkP2AboveEMA || _ClosesBuffer_P2[i] < _EMA_P2_Fast[i]) &&
+              (!enablePeriod3 || !checkP3AboveEMA || _ClosesBuffer_P3[i] < _EMA_P3_Fast[i]);
    }
    
    // Discart              
    if(!trend) return false;
    
    // Lows not touch EMA slow
-   for(int i = 0; i < BARS_COUNT_TREND && trend; i++)
+   for(int i = 1; i < BARS_COUNT_TREND && trend; i++)
    {
-      trend = (!enablePeriod1 || _HighsBuffer_P1[i] < _EMA_P1_Slow[i]) && 
-              (!enablePeriod2 || _HighsBuffer_P2[i] < _EMA_P2_Slow[i]) &&
-              (!enablePeriod3 || _HighsBuffer_P3[i] < _EMA_P3_Slow[i]);
+      trend = (!enablePeriod1 || !checkP1IfNotTouchEMASlow || _HighsBuffer_P1[i] < _EMA_P1_Slow[i]) && 
+              (!enablePeriod2 || !checkP2IfNotTouchEMASlow || _HighsBuffer_P1[i] < _EMA_P2_Slow[i]) &&
+              (!enablePeriod3 || !checkP3IfNotTouchEMASlow || _HighsBuffer_P1[i] < _EMA_P3_Slow[i]);
    }
    
    
@@ -296,9 +300,9 @@ bool CheckSellConditions()
    if(!trend) return false;
    
    
-   trend = ((prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0]) || !openPositionInBound_P1 || !enablePeriod1) || 
-           ((prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0]) || !openPositionInBound_P2 || !enablePeriod2) ||
-           ((prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0]) || !openPositionInBound_P3 || !enablePeriod3);
+   trend = (!openPositionInBound_P1 || !enablePeriod1 || (prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])) || 
+           (!openPositionInBound_P2 || !enablePeriod2 || (prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])) ||
+           (!openPositionInBound_P3 || !enablePeriod3 || (prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0]));
                   
    return trend;        
 }
@@ -312,15 +316,25 @@ bool CheckSellConditions()
 // Initialize indicators   
 void InitializeIndicatorHandles(){
    
-    EMA_P1_Fast_Handle = iMA(Symbol(), Period1, 10, 0, MODE_EMA, PRICE_CLOSE);
-    EMA_P1_Slow_Handle = iMA(Symbol(), Period1, 21, 0, MODE_EMA, PRICE_CLOSE);
+    if(enablePeriod1)
+    {
+      EMA_P1_Fast_Handle = iMA(Symbol(), Period1, 10, 0, MODE_EMA, PRICE_CLOSE);
+      EMA_P1_Slow_Handle = iMA(Symbol(), Period1, 21, 0, MODE_EMA, PRICE_CLOSE);
+    }
+    
+    if(enablePeriod2)
+    {
+      EMA_P2_Fast_Handle = iMA(Symbol(), Period2, 10, 0, MODE_EMA, PRICE_CLOSE);
+      EMA_P2_Slow_Handle = iMA(Symbol(), Period2, 21, 0, MODE_EMA, PRICE_CLOSE);
+    }
+    
+    if(enablePeriod3)
+    {
+      EMA_P3_Fast_Handle = iMA(Symbol(), Period3, 10, 0, MODE_EMA, PRICE_CLOSE);
+      EMA_P3_Slow_Handle = iMA(Symbol(), Period3, 21, 0, MODE_EMA, PRICE_CLOSE);
+    }
 
-    EMA_P2_Fast_Handle = iMA(Symbol(), Period2, 10, 0, MODE_EMA, PRICE_CLOSE);
-    EMA_P2_Slow_Handle = iMA(Symbol(), Period2, 21, 0, MODE_EMA, PRICE_CLOSE);
-
-    EMA_P3_Fast_Handle = iMA(Symbol(), Period3, 10, 0, MODE_EMA, PRICE_CLOSE);
-    EMA_P3_Slow_Handle = iMA(Symbol(), Period3, 21, 0, MODE_EMA, PRICE_CLOSE);
-
+    
 
 }
 
@@ -356,32 +370,48 @@ bool RefreshIndicators()
    
    
    
-   if (CopyBuffer(EMA_P1_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P1_Fast) < 0) { Print("CopyBuffer EMA_P1_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyBuffer(EMA_P1_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P1_Slow) < 0) { Print("CopyBuffer EMA_P1_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
-
-   if (CopyBuffer(EMA_P2_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P2_Fast) < 0) { Print("CopyBuffer EMA_P2_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyBuffer(EMA_P2_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P2_Slow) < 0) { Print("CopyBuffer EMA_P2_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
-
-   if (CopyBuffer(EMA_P3_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P3_Fast) < 0) { Print("CopyBuffer EMA_P3_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyBuffer(EMA_P3_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P3_Slow) < 0) { Print("CopyBuffer EMA_P3_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
+   
+   
    
    // Candlesticks
    // PERIOD 1
-   if (CopyHigh(Symbol(), Period1, 0, SIZE_BUFFERS, _HighsBuffer_P1) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyLow(Symbol(), Period1, 0, SIZE_BUFFERS, _LowsBuffer_P1) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyClose(Symbol(), Period1, 0, SIZE_BUFFERS, _ClosesBuffer_P1) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyOpen(Symbol(), Period1, 0, SIZE_BUFFERS, _OpensBuffer_P1) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   // PERIOD 2
-   if (CopyHigh(Symbol(), Period2, 0, SIZE_BUFFERS, _HighsBuffer_P2) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyLow(Symbol(), Period2, 0, SIZE_BUFFERS, _LowsBuffer_P2) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyClose(Symbol(), Period2, 0, SIZE_BUFFERS, _ClosesBuffer_P2) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyOpen(Symbol(), Period2, 0, SIZE_BUFFERS, _OpensBuffer_P2) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   // PERIOD 3
-   if (CopyHigh(Symbol(), Period3, 0, SIZE_BUFFERS, _HighsBuffer_P3) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyLow(Symbol(), Period3, 0, SIZE_BUFFERS, _LowsBuffer_P3) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyClose(Symbol(), Period3, 0, SIZE_BUFFERS, _ClosesBuffer_P3) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
-   if (CopyOpen(Symbol(), Period3, 0, SIZE_BUFFERS, _OpensBuffer_P3) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+   if(enablePeriod1)
+   {
+      if (CopyBuffer(EMA_P1_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P1_Fast) < 0) { Print("CopyBuffer EMA_P1_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyBuffer(EMA_P1_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P1_Slow) < 0) { Print("CopyBuffer EMA_P1_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
+
    
+      if (CopyHigh(Symbol(), Period1, 0, SIZE_BUFFERS, _HighsBuffer_P1) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyLow(Symbol(), Period1, 0, SIZE_BUFFERS, _LowsBuffer_P1) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyClose(Symbol(), Period1, 0, SIZE_BUFFERS, _ClosesBuffer_P1) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyOpen(Symbol(), Period1, 0, SIZE_BUFFERS, _OpensBuffer_P1) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+   }
+   // PERIOD 2
+   if(enablePeriod2)
+   {
+      if (CopyBuffer(EMA_P2_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P2_Fast) < 0) { Print("CopyBuffer EMA_P2_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyBuffer(EMA_P2_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P2_Slow) < 0) { Print("CopyBuffer EMA_P2_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
+
+      
+      if (CopyHigh(Symbol(), Period2, 0, SIZE_BUFFERS, _HighsBuffer_P2) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyLow(Symbol(), Period2, 0, SIZE_BUFFERS, _LowsBuffer_P2) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyClose(Symbol(), Period2, 0, SIZE_BUFFERS, _ClosesBuffer_P2) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyOpen(Symbol(), Period2, 0, SIZE_BUFFERS, _OpensBuffer_P2) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+
+   }
+   // PERIOD 3
+   if(enablePeriod3)
+   {
+      if (CopyBuffer(EMA_P3_Fast_Handle, 0, 0, SIZE_BUFFERS, _EMA_P3_Fast) < 0) { Print("CopyBuffer EMA_P3_Fast_Handle Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyBuffer(EMA_P3_Slow_Handle, 0, 0, SIZE_BUFFERS, _EMA_P3_Slow) < 0) { Print("CopyBuffer EMA_P3_Slow_Handle error = ", GetLastError()); ErrorIndicator = true; }
+   
+      
+      if (CopyHigh(Symbol(), Period3, 0, SIZE_BUFFERS, _HighsBuffer_P3) < 0) { Print("CopyHigh Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyLow(Symbol(), Period3, 0, SIZE_BUFFERS, _LowsBuffer_P3) < 0) { Print("CopyLow Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyClose(Symbol(), Period3, 0, SIZE_BUFFERS, _ClosesBuffer_P3) < 0) { Print("CopyClose Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+      if (CopyOpen(Symbol(), Period3, 0, SIZE_BUFFERS, _OpensBuffer_P3) < 0) { Print("CopyOpen Historical Data Error = ", GetLastError()); ErrorIndicator = true; }
+   }
+      
    if (ErrorIndicator) { Print("Error Indicator: ", GetLastError()); return false; }
     
    else return true;
