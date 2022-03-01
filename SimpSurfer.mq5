@@ -43,6 +43,7 @@ input bool enableNOPScheduler = false;      // Not operation Scheduler mode
 input int NOPSchedulerFrom;                 // Not operation Scheduler: From
 input int NOPSchedulerTo;                   // Not operation Scheduler: To
 
+input int ClosePositionWhenLossMoreThan = 0; // Close position when loss more than
 
 // Test Configure
 input bool testingMode = true;   // Testing Mode
@@ -147,16 +148,20 @@ void OnTick()
    
    bool newbar = isNewBar();
    
+   int positionsTotal = PositionsTotal();
+   
    if (newbar)
    {
       if(ModeOperation == TIME)
       {
+         // TimeElapsed = TimeElapsed + 1
          if(test.openedPosition) test.TimeElapsed++;
-         if(PositionsTotal() > 0) TimeElapsed++;
+         if(positionsTotal > 0) TimeElapsed++;
          
-         if(PositionsTotal() > 0 && TimeElapsed >= countBarsTimeTest)
+         
+         if(positionsTotal > 0 && TimeElapsed >= countBarsTimeTest)
          {
-            CloseAllPositions();
+            CloseAllPositions(positionsTotal);
             TimeElapsed = 0;
          }
       }
@@ -165,7 +170,14 @@ void OnTick()
    
    if(test.openedPosition) test.ValidatePositions(curr_Price);
    
-   else if(!test.openedPosition && PositionsTotal() == 0)
+   if (positionsTotal > 0)
+   {
+      if(ClosePositionWhenLossMoreThan > 0) 
+         CloseOperationIfLossMoreThan(ClosePositionWhenLossMoreThan);
+   }
+   
+   // Check condition for open new position
+   else
    {
       if(CheckBuyConditions() && enableBuy) 
       {
