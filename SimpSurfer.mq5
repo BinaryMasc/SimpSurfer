@@ -214,6 +214,7 @@ void OnTick()
 
 bool CheckBuyConditions()
 {
+/*
    bool trend = true;
    
    for(int i = 0; i < EMA_BARS_COUNT_TREND && trend; i++)
@@ -254,7 +255,61 @@ bool CheckBuyConditions()
            ((prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0]) || !openPositionInBound_P2 || !enablePeriod2) ||
            ((prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0]) || !openPositionInBound_P3 || !enablePeriod3);
            
-   return trend;        
+   return trend;    
+   */    
+   
+   
+   bool trend = true;
+   
+   for(int i = 1; i < EMA_BARS_COUNT_TREND && trend; i++)
+      trend = (!enablePeriod1 || _EMA_P1_Fast[i] > _EMA_P1_Slow[i]) && 
+              (!enablePeriod2 || _EMA_P2_Fast[i] > _EMA_P2_Slow[i]) &&
+              (!enablePeriod3 || _EMA_P3_Fast[i] > _EMA_P3_Slow[i]);
+              
+   
+   // Discart              
+   if(!trend) return false;
+   
+   
+   
+   for(int i = 1; i < BARS_COUNT_TREND && trend; i++)
+   {
+      trend = (!enablePeriod1 || !checkP1AboveEMA || _ClosesBuffer_P1[i] > _EMA_P1_Fast[i]) && 
+              (!enablePeriod2 || !checkP2AboveEMA || _ClosesBuffer_P2[i] > _EMA_P2_Fast[i]) &&
+              (!enablePeriod3 || !checkP3AboveEMA || _ClosesBuffer_P3[i] > _EMA_P3_Fast[i]);
+   }
+   
+   // Discart              
+   if(!trend) return false;
+   
+   // Lows not touch EMA slow
+   for(int i = 1; i < BARS_COUNT_TREND && trend; i++)
+   {
+      trend = (!enablePeriod1 || !checkP1IfNotTouchEMASlow || _LowsBuffer_P1[i] > _EMA_P1_Slow[i]) && 
+              (!enablePeriod2 || !checkP2IfNotTouchEMASlow || _LowsBuffer_P2[i] > _EMA_P2_Slow[i]) &&
+              (!enablePeriod3 || !checkP3IfNotTouchEMASlow || _LowsBuffer_P3[i] > _EMA_P3_Slow[i]);
+   }
+   
+   
+   // Discart              
+   if(!trend) return false;
+   
+   
+   
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price > _EMA_P1_Slow[0] && curr_Price < _EMA_P1_Slow[0])
+      return true;
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0])
+      return true;   
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0])
+      return true;   
+      
+   if((!openPositionInBound_P1 || !enablePeriod1) &&
+      (!openPositionInBound_P2 || !enablePeriod2) &&
+      (!openPositionInBound_P3 || !enablePeriod3)) 
+         return true;  
+   
+   
+   return false;
    
 }
 
@@ -300,11 +355,22 @@ bool CheckSellConditions()
    if(!trend) return false;
    
    
-   trend = (!openPositionInBound_P1 || !enablePeriod1 || (prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])) || 
-           (!openPositionInBound_P2 || !enablePeriod2 || (prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])) ||
-           (!openPositionInBound_P3 || !enablePeriod3 || (prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0]));
-                  
-   return trend;        
+   
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])
+      return true;
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])
+      return true;   
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0])
+      return true;   
+      
+   if((!openPositionInBound_P1 || !enablePeriod1) &&
+      (!openPositionInBound_P2 || !enablePeriod2) &&
+      (!openPositionInBound_P3 || !enablePeriod3)) 
+         return true;  
+   
+   
+   return false;
+                         
 }
 
 
