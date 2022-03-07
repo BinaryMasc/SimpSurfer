@@ -174,35 +174,40 @@ void OnTick()
    
    if(test.openedPosition) test.ValidatePositions(curr_Price);
    
-   if (positionsTotal > 0)
-   {
-      if(ClosePositionWhenLossMoreThan > 0) 
-         CloseOperationIfLossMoreThan(ClosePositionWhenLossMoreThan);
-   }
    
-   // Check condition for open new position
-   else
-   {
-      if(enableBuy && CheckBuyConditions()) 
-      {
-         //printf("buy conditions");
-         
-         if(testingMode) 
-            test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
-            
-         else SendBuyMarket(curr_Price, Lots);   
-         
-         
-      }
+   if(positionsTotal > 0 && ClosePositionWhenLossMoreThan > 0)
+      CloseOperationIfLossMoreThan(ClosePositionWhenLossMoreThan);
       
-      if(enableSell && CheckSellConditions()) 
+      
+   // Check conditions for open new position
+   if(positionsTotal < 1)
+   {
+      // verify scheduler of Not operation
+      datetime dtSer=TimeCurrent(dt_struct);
+      int cHour = dt_struct.hour;
+      
+      bool shedulerAllow = ((NotOperationScheduler.enabled && !(cHour >= NotOperationScheduler.HourFrom && cHour <= NotOperationScheduler.HourTo)) || !NotOperationScheduler.enabled);
+      
+      
+      if(shedulerAllow)
       {
-         //printf("sell conditions");
-         
-         if(testingMode) 
-            test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
+         if(enableBuy && CheckBuyConditions()) 
+         {
+            if(testingMode) 
+               test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
+               
+            else SendBuyMarket(curr_Price, Lots);   
             
-         else SendSellMarket(curr_Price, Lots);      
+            
+         }
+         
+         if(enableSell && CheckSellConditions()) 
+         {            
+            if(testingMode) 
+               test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
+               
+            else SendSellMarket(curr_Price, Lots);      
+         }
       }
    }
    
