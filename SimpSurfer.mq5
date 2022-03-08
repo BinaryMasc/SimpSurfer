@@ -4,7 +4,6 @@
 //|                                                                  |
 //+------------------------------------------------------------------+
 #property copyright "BinaryDog"
-#property version   "1.00"
 
 #include "include\\BinaryTest.mqh"
 #include "include\\BinaryExtensions.mqh"
@@ -34,17 +33,23 @@ input ENUM_TIMEFRAMES Period1 = PERIOD_M30; // Period 1 Timeframe (current)
 input ENUM_TIMEFRAMES Period2 = PERIOD_H1;  // Period 2 Timeframe
 input ENUM_TIMEFRAMES Period3 = PERIOD_H4;  // Period 3 Timeframe
 
-input bool checkP1AboveEMA = false; // Check if Period 1 closes price is above EMAs
-input bool checkP2AboveEMA = true;  // Check if Period 2 closes price is above EMAs
-input bool checkP3AboveEMA = true;  // Check if Period 3 closes price is above EMAs
+/*input*/ bool checkP1AboveEMA = false; // Check if Period 1 closes price is above EMAs
+/*input*/ bool checkP2AboveEMA = true;  // Check if Period 2 closes price is above EMAs
+/*input*/ bool checkP3AboveEMA = true;  // Check if Period 3 closes price is above EMAs
 
-input bool checkP1IfNotTouchEMASlow = false;	//	Check if isn't Touch EMA Slow P1
-input bool checkP2IfNotTouchEMASlow = true;	//	Check if isn't Touch EMA Slow P2
-input bool checkP3IfNotTouchEMASlow = true;	//	Check if isn't Touch EMA Slow P3
 
-input bool openPositionInBound_P1 = true;  // Open position in bound (EMA slow) P1
-input bool openPositionInBound_P2 = true;  // Open position in bound (EMA slow) P2
+
+// TODO: Params disabled for now
+
+/*input*/ bool checkP1IfNotTouchEMASlow = false;	//	Check if isn't Touch EMA Slow P1
+/*input*/ bool checkP2IfNotTouchEMASlow = false;	//	Check if isn't Touch EMA Slow P2
+/*input*/ bool checkP3IfNotTouchEMASlow = false;	//	Check if isn't Touch EMA Slow P3
+
+input bool openPositionInBound_P1 = false;  // Open position in bound (EMA slow) P1
+input bool openPositionInBound_P2 = false;  // Open position in bound (EMA slow) P2
 input bool openPositionInBound_P3 = false;  // Open position in bound (EMA slow) P3
+
+
 
 input bool openEvenPeriodIsntDefined = false;   // Open position even period of trend isn't defined
 
@@ -53,20 +58,34 @@ input int NOPSchedulerFrom;                 // Not operation Scheduler: From
 input int NOPSchedulerTo;                   // Not operation Scheduler: To
 
 input int ClosePositionWhenLossMoreThan = 0;    // Close position when loss more than
-input bool ClosePositionWhenPriceBreakEMASlow = false;  // Close position when price break EMA slow [close price|new bar event]
+input bool ClosePositionWhenPriceBreakEMASlow = false;  // Close position when price break EMA slow - close price | new bar event -
 
 // Test Configure
 input bool testingMode = true;   // Testing Mode
 
-input MODE_OPERATION ModeOperation = TIME;  // Mode Operation
-input int countBarsTimeTest = 5;                   // Number of bars for time test
+input MODE_OPERATION ModeOperation = TIME;   // Mode Operation
+input int countBarsTimeTest = 5;             // Number of bars for time test
 
 
+//---
+
+
+
+// Period defined in open position event
 enum PERIOD {
    NONE,
    PERIOD_1,
    PERIOD_2,
    PERIOD_3
+};
+
+
+// EMA Pivot to open position
+// TODO: Still not implemented
+enum EMA_PIVOT
+{
+   SLOW,
+   FAST
 };
 
 
@@ -78,8 +97,13 @@ double curr_Price;
 int TimeElapsed;
 MqlDateTime dt_struct;
 Testing test;
+
 NotOperateHour NotOperationScheduler;
-PERIOD currPeriodForPosition;
+PERIOD         currPeriodForPosition;
+TYPE_POSITION  currTypePosition;
+
+
+bool  enabledCloseCondition1;
 
 //---
 
@@ -143,6 +167,8 @@ int OnInit()
     TimeElapsed = 0;
     
     currPeriodForPosition = NONE;
+    
+    enabledCloseCondition1 = ClosePositionWhenPriceBreakEMASlow;
   
    return(INIT_SUCCEEDED);
 }
@@ -187,11 +213,20 @@ void OnTick()
    }
      
    
-   if(test.openedPosition) test.ValidatePositions(curr_Price);
+   //if(test.openedPosition) test.ValidatePositions(curr_Price);
    
    
-   if(positionsTotal > 0 && ClosePositionWhenLossMoreThan > 0)
-      CloseOperationIfLossMoreThan(ClosePositionWhenLossMoreThan);
+   
+   // Check positions status
+   if(positionsTotal > 0)
+   {
+      if(ClosePositionWhenLossMoreThan > 0)
+         CloseOperationIfLossMoreThan(ClosePositionWhenLossMoreThan);
+         
+      if(CheckCloseConditions(newbar))
+         CloseAllPositions(positionsTotal);   
+   }
+      
       
       
    // Check conditions for open new position
@@ -206,8 +241,11 @@ void OnTick()
       
       if(shedulerAllow)
       {
-         if(enableBuy && CheckBuyConditions(currPeriodForPosition)) 
+         if(enableBuy && CheckBuyConditions()) 
          {
+            
+            currTypePosition = BUY;
+            
             if(testingMode) 
                test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
                
@@ -216,8 +254,11 @@ void OnTick()
             
          }
          
-         if(enableSell && CheckSellConditions(currPeriodForPosition)) 
-         {            
+         if(enableSell && CheckSellConditions()) 
+         {      
+            
+            currTypePosition = SELL;
+                  
             if(testingMode) 
                test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
                
@@ -232,11 +273,10 @@ void OnTick()
 }
 //+------------------------------------------------------------------+
 
-bool CheckBuyConditions(PERIOD &period)
+bool CheckBuyConditions()
 {
    
    bool trend = true;
-   period = NONE;
    
    for(int i = 1; i < EMA_BARS_COUNT_TREND && trend; i++)
       trend = (!enablePeriod1 || _EMA_P1_Fast[i] > _EMA_P1_Slow[i]) && 
@@ -272,11 +312,11 @@ bool CheckBuyConditions(PERIOD &period)
    
    
    if(openPositionInBound_P1 && enablePeriod1 && prev_Price > _EMA_P1_Slow[0] && curr_Price < _EMA_P1_Slow[0])
-      { period = PERIOD_1; return true; }
+      { currPeriodForPosition = PERIOD_1; return true; }
    if(openPositionInBound_P2 && enablePeriod2 && prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0])
-      { period = PERIOD_2; return true; }
+      { currPeriodForPosition = PERIOD_2; return true; }
    if(openPositionInBound_P3 && enablePeriod3 && prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0])
-      { period = PERIOD_3; return true; }
+      { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
       (!openPositionInBound_P2 || !enablePeriod2) &&
@@ -287,7 +327,7 @@ bool CheckBuyConditions(PERIOD &period)
    
    if (openEvenPeriodIsntDefined) return trend;
    
-   else if (trend && period != NONE) return true;
+   else if (trend && currPeriodForPosition != NONE) return true;
    
    else return false;
       
@@ -297,10 +337,9 @@ bool CheckBuyConditions(PERIOD &period)
 
 
 //-----------------------
-bool CheckSellConditions(PERIOD &period)
+bool CheckSellConditions()
 {
    bool trend = true;
-   period = NONE;
    
    for(int i = 1; i < EMA_BARS_COUNT_TREND && trend; i++)
       trend = (!enablePeriod1 || _EMA_P1_Fast[i] < _EMA_P1_Slow[i]) && 
@@ -336,11 +375,11 @@ bool CheckSellConditions(PERIOD &period)
    
    
    if(openPositionInBound_P1 && enablePeriod1 && prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])
-      { period = PERIOD_1; return true; }
+      { currPeriodForPosition = PERIOD_1; return true; }
    if(openPositionInBound_P2 && enablePeriod2 && prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])
-      { period = PERIOD_2; return true; }
+      { currPeriodForPosition = PERIOD_2; return true; }
    if(openPositionInBound_P3 && enablePeriod3 && prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0])
-      { period = PERIOD_3; return true; }
+      { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
       (!openPositionInBound_P2 || !enablePeriod2) &&
@@ -351,25 +390,42 @@ bool CheckSellConditions(PERIOD &period)
    
    if (openEvenPeriodIsntDefined) return trend;
    
-   else if (trend && period != NONE) return true;
+   else if (trend && currPeriodForPosition != NONE) return true;
    
    else return false;
    
                          
 }
 
-/*
+
 bool CheckCloseConditions(bool newbar = false)
 {
    
-   if(ClosePositionWhenPriceBreakEMASlow && newbar)
+   if (ClosePositionWhenPriceBreakEMASlow && iCloseCondition_1(newbar)) return true;
+   
+   
+   
+   else return false;
+}
+
+
+bool iCloseCondition_1(bool newbar)
+{
+   if(newbar)
    {
-      if(_cl)
+      
+      if(currPeriodForPosition != NONE)
+      {
+         
+         if((currPeriodForPosition == PERIOD_1 && (currTypePosition == BUY ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
+            (currPeriodForPosition == PERIOD_2 && (currTypePosition == BUY ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
+            (currPeriodForPosition == PERIOD_3 && (currTypePosition == BUY ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
+            return true;
+      }
    }
-}*/
-
-
-
+   
+   return false;
+}
 
 
 // Initialize indicators   
