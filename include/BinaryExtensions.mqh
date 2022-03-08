@@ -21,9 +21,9 @@ void SendSellMarket(double price, double lots, double TP = 0, double SL = 0) {
     trade.Sell(lots, Symbol(), price, SL, TP, "Executed by BinaryExtensions.");
 }
 
-void CloseAllPositions()
+void CloseAllPositions(int positionsTotal)
 {
-   for(int i=PositionsTotal()-1; i>=0; i--)
+   for(int i=positionsTotal-1; i>=0; i--)
    {
        ulong ticket=PositionGetTicket(i);
        trade.PositionClose(ticket);   
@@ -44,4 +44,23 @@ bool isNewBar()
         return true;
     }
     else return false;
+}
+
+void CloseOperationIfLossMoreThan(int maxLoss)
+{
+   
+   int positionsCount = PositionsTotal();
+   
+   for(int i = 0; i < positionsCount; i++)
+   {
+      double profit = 0;
+      
+      ulong ticket=PositionGetTicket(i);
+      
+      PositionSelectByTicket(ticket);
+       
+      PositionGetDouble(POSITION_PROFIT, profit);
+      
+      if(profit < (maxLoss*-1)) trade.PositionClose(ticket);
+   }
 }
