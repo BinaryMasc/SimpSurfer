@@ -34,9 +34,9 @@ void CloseAllPositions(int positionsTotal)
 datetime Old_Time;
 datetime New_Time;
 
-bool isNewBar()
+bool isNewBar(ENUM_TIMEFRAMES pPeriod)
 {
-    New_Time = iTime(Symbol(), PERIOD_CURRENT, 0);
+    New_Time = iTime(Symbol(), pPeriod, 0);
 
     if (New_Time != Old_Time)
     {

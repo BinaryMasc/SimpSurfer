@@ -15,6 +15,13 @@
 #define EMA_PERIOD_FAST 9
 #define EMA_PERIOD_SLOW 21
 
+// EMA Pivot to open position
+enum EMA_PIVOT
+{
+   SLOW,
+   FAST
+};
+
 
 input
 double Lots = 1;
@@ -49,7 +56,7 @@ input bool openPositionInBound_P1 = false;  // Open position in bound (EMA slow)
 input bool openPositionInBound_P2 = false;  // Open position in bound (EMA slow) P2
 input bool openPositionInBound_P3 = false;  // Open position in bound (EMA slow) P3
 
-
+input EMA_PIVOT emaPivotType = SLOW;   // EMA pivot
 
 input bool openEvenPeriodIsntDefined = false;   // Open position even period of trend isn't defined
 
@@ -77,15 +84,6 @@ enum PERIOD {
    PERIOD_1,
    PERIOD_2,
    PERIOD_3
-};
-
-
-// EMA Pivot to open position
-// TODO: Still not implemented
-enum EMA_PIVOT
-{
-   SLOW,
-   FAST
 };
 
 
@@ -191,7 +189,7 @@ void OnTick()
    curr_Price = _ClosesBuffer_P1[0];
    if(prev_Price == 0) prev_Price = curr_Price;
    
-   bool newbar = isNewBar();
+   bool newbar = isNewBar(Period1);
    
    int positionsTotal = PositionsTotal();
    
@@ -311,11 +309,11 @@ bool CheckBuyConditions()
    
    
    
-   if(openPositionInBound_P1 && enablePeriod1 && prev_Price > _EMA_P1_Slow[0] && curr_Price < _EMA_P1_Slow[0])
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price > (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]))
       { currPeriodForPosition = PERIOD_1; return true; }
-   if(openPositionInBound_P2 && enablePeriod2 && prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0])
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price > (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]))
       { currPeriodForPosition = PERIOD_2; return true; }
-   if(openPositionInBound_P3 && enablePeriod3 && prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0])
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price > (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]))
       { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
@@ -374,11 +372,11 @@ bool CheckSellConditions()
    
    
    
-   if(openPositionInBound_P1 && enablePeriod1 && prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price < (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]))
       { currPeriodForPosition = PERIOD_1; return true; }
-   if(openPositionInBound_P2 && enablePeriod2 && prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price < (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]))
       { currPeriodForPosition = PERIOD_2; return true; }
-   if(openPositionInBound_P3 && enablePeriod3 && prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0])
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price < (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]))
       { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
