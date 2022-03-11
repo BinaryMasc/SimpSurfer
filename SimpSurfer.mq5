@@ -73,6 +73,8 @@ input bool testingMode = true;   // Testing Mode
 input MODE_OPERATION ModeOperation = TIME;   // Mode Operation
 input int countBarsTimeTest = 5;             // Number of bars for time test
 
+input bool TrainingOptimization = true;
+
 
 //---
 
@@ -149,6 +151,12 @@ double  _EMA_P1_Fast[],
 
 int OnInit()
 {
+
+   if(TrainingOptimization && !enableBuy && !enableSell) 
+   {
+      Print("TrainingOptimization: Buy and sell disabled. Disconnecting bot for test performance");
+      ExpertRemove();
+   }
   
     test = new Testing();
     test.TestingMode = testingMode;
