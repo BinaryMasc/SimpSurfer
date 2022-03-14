@@ -29,6 +29,8 @@ double Lots = 1;
 input bool enableSell = true; // Enable short transactions
 input bool enableBuy = true;  // Enable long transactions
 
+input bool ReverseMode = false;  // Reverse Mode
+
 input 
 bool CalculateInNewBar = false;
 
@@ -249,26 +251,14 @@ void OnTick()
       {
          if(enableBuy && CheckBuyConditions()) 
          {
-            
-            currTypePosition = BUY;
-            
-            if(testingMode) 
-               test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
-               
-            else SendBuyMarket(curr_Price, Lots);   
-            
-            
+            if(ReverseMode) iSetSell();
+            else iSetBuy();
          }
          
          if(enableSell && CheckSellConditions()) 
          {      
-            
-            currTypePosition = SELL;
-                  
-            if(testingMode) 
-               test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
-               
-            else SendSellMarket(curr_Price, Lots);      
+            if(ReverseMode) iSetBuy();
+            else iSetSell();
          }
       }
    }
@@ -423,10 +413,21 @@ bool iCloseCondition_1(bool newbar)
       if(currPeriodForPosition != NONE)
       {
          
-         if((currPeriodForPosition == PERIOD_1 && (currTypePosition == BUY ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
-            (currPeriodForPosition == PERIOD_2 && (currTypePosition == BUY ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
-            (currPeriodForPosition == PERIOD_3 && (currTypePosition == BUY ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
-            return true;
+         if (ReverseMode)
+         {
+            if((currPeriodForPosition == PERIOD_1 && (currTypePosition == SELL ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
+               (currPeriodForPosition == PERIOD_2 && (currTypePosition == SELL ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
+               (currPeriodForPosition == PERIOD_3 && (currTypePosition == SELL ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
+                  return true;
+         }
+         
+         else
+         {
+            if((currPeriodForPosition == PERIOD_1 && (currTypePosition == BUY ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
+               (currPeriodForPosition == PERIOD_2 && (currTypePosition == BUY ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
+               (currPeriodForPosition == PERIOD_3 && (currTypePosition == BUY ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
+                  return true;
+         }
       }
    }
    
@@ -538,4 +539,24 @@ bool RefreshIndicators()
    else return true;
 }
 
+
+void iSetBuy()
+{
+   currTypePosition = BUY;
+            
+   if(testingMode) 
+      test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
+      
+   else SendBuyMarket(curr_Price, Lots);   
+}
+
+void iSetSell()
+{
+   currTypePosition = SELL;
+                  
+   if(testingMode) 
+      test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
+      
+   else SendSellMarket(curr_Price, Lots); 
+}
 
