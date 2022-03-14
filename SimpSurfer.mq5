@@ -15,12 +15,21 @@
 #define EMA_PERIOD_FAST 9
 #define EMA_PERIOD_SLOW 21
 
+// EMA Pivot to open position
+enum EMA_PIVOT
+{
+   SLOW,
+   FAST
+};
+
 
 input
 double Lots = 1;
 
 input bool enableSell = true; // Enable short transactions
 input bool enableBuy = true;  // Enable long transactions
+
+input bool ReverseMode = false;  // Reverse Mode
 
 input 
 bool CalculateInNewBar = false;
@@ -49,7 +58,7 @@ input bool openPositionInBound_P1 = false;  // Open position in bound (EMA slow)
 input bool openPositionInBound_P2 = false;  // Open position in bound (EMA slow) P2
 input bool openPositionInBound_P3 = false;  // Open position in bound (EMA slow) P3
 
-
+input EMA_PIVOT emaPivotType = SLOW;   // EMA pivot
 
 input bool openEvenPeriodIsntDefined = false;   // Open position even period of trend isn't defined
 
@@ -66,6 +75,8 @@ input bool testingMode = true;   // Testing Mode
 input MODE_OPERATION ModeOperation = TIME;   // Mode Operation
 input int countBarsTimeTest = 5;             // Number of bars for time test
 
+input bool TrainingOptimization = true;
+
 
 //---
 
@@ -77,15 +88,6 @@ enum PERIOD {
    PERIOD_1,
    PERIOD_2,
    PERIOD_3
-};
-
-
-// EMA Pivot to open position
-// TODO: Still not implemented
-enum EMA_PIVOT
-{
-   SLOW,
-   FAST
 };
 
 
@@ -151,6 +153,12 @@ double  _EMA_P1_Fast[],
 
 int OnInit()
 {
+
+   if(TrainingOptimization && !enableBuy && !enableSell) 
+   {
+      Print("TrainingOptimization: Buy and sell disabled. Disconnecting bot for test performance");
+      ExpertRemove();
+   }
   
     test = new Testing();
     test.TestingMode = testingMode;
@@ -191,7 +199,7 @@ void OnTick()
    curr_Price = _ClosesBuffer_P1[0];
    if(prev_Price == 0) prev_Price = curr_Price;
    
-   bool newbar = isNewBar();
+   bool newbar = isNewBar(Period1);
    
    int positionsTotal = PositionsTotal();
    
@@ -243,26 +251,14 @@ void OnTick()
       {
          if(enableBuy && CheckBuyConditions()) 
          {
-            
-            currTypePosition = BUY;
-            
-            if(testingMode) 
-               test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
-               
-            else SendBuyMarket(curr_Price, Lots);   
-            
-            
+            if(ReverseMode) iSetSell();
+            else iSetBuy();
          }
          
          if(enableSell && CheckSellConditions()) 
          {      
-            
-            currTypePosition = SELL;
-                  
-            if(testingMode) 
-               test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
-               
-            else SendSellMarket(curr_Price, Lots);      
+            if(ReverseMode) iSetBuy();
+            else iSetSell();
          }
       }
    }
@@ -311,11 +307,11 @@ bool CheckBuyConditions()
    
    
    
-   if(openPositionInBound_P1 && enablePeriod1 && prev_Price > _EMA_P1_Slow[0] && curr_Price < _EMA_P1_Slow[0])
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price > (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]))
       { currPeriodForPosition = PERIOD_1; return true; }
-   if(openPositionInBound_P2 && enablePeriod2 && prev_Price > _EMA_P2_Slow[0] && curr_Price < _EMA_P2_Slow[0])
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price > (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]))
       { currPeriodForPosition = PERIOD_2; return true; }
-   if(openPositionInBound_P3 && enablePeriod3 && prev_Price > _EMA_P3_Slow[0] && curr_Price < _EMA_P3_Slow[0])
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price > (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]) && curr_Price < (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]))
       { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
@@ -374,11 +370,11 @@ bool CheckSellConditions()
    
    
    
-   if(openPositionInBound_P1 && enablePeriod1 && prev_Price < _EMA_P1_Slow[0] && curr_Price > _EMA_P1_Slow[0])
+   if(openPositionInBound_P1 && enablePeriod1 && prev_Price < (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P1_Slow[0] : _EMA_P1_Fast[0]))
       { currPeriodForPosition = PERIOD_1; return true; }
-   if(openPositionInBound_P2 && enablePeriod2 && prev_Price < _EMA_P2_Slow[0] && curr_Price > _EMA_P2_Slow[0])
+   if(openPositionInBound_P2 && enablePeriod2 && prev_Price < (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P2_Slow[0] : _EMA_P2_Fast[0]))
       { currPeriodForPosition = PERIOD_2; return true; }
-   if(openPositionInBound_P3 && enablePeriod3 && prev_Price < _EMA_P3_Slow[0] && curr_Price > _EMA_P3_Slow[0])
+   if(openPositionInBound_P3 && enablePeriod3 && prev_Price < (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]) && curr_Price > (emaPivotType == SLOW ? _EMA_P3_Slow[0] : _EMA_P3_Fast[0]))
       { currPeriodForPosition = PERIOD_3; return true; }
       
    if((!openPositionInBound_P1 || !enablePeriod1) &&
@@ -417,10 +413,21 @@ bool iCloseCondition_1(bool newbar)
       if(currPeriodForPosition != NONE)
       {
          
-         if((currPeriodForPosition == PERIOD_1 && (currTypePosition == BUY ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
-            (currPeriodForPosition == PERIOD_2 && (currTypePosition == BUY ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
-            (currPeriodForPosition == PERIOD_3 && (currTypePosition == BUY ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
-            return true;
+         if (ReverseMode)
+         {
+            if((currPeriodForPosition == PERIOD_1 && (currTypePosition == SELL ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
+               (currPeriodForPosition == PERIOD_2 && (currTypePosition == SELL ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
+               (currPeriodForPosition == PERIOD_3 && (currTypePosition == SELL ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
+                  return true;
+         }
+         
+         else
+         {
+            if((currPeriodForPosition == PERIOD_1 && (currTypePosition == BUY ? _ClosesBuffer_P1[1] < _EMA_P1_Slow[1] : _ClosesBuffer_P1[1] > _EMA_P1_Slow[1])) || 
+               (currPeriodForPosition == PERIOD_2 && (currTypePosition == BUY ? _ClosesBuffer_P2[1] < _EMA_P2_Slow[1] : _ClosesBuffer_P2[1] > _EMA_P2_Slow[1])) ||
+               (currPeriodForPosition == PERIOD_3 && (currTypePosition == BUY ? _ClosesBuffer_P3[1] < _EMA_P3_Slow[1] : _ClosesBuffer_P3[1] > _EMA_P3_Slow[1]))) 
+                  return true;
+         }
       }
    }
    
@@ -532,4 +539,24 @@ bool RefreshIndicators()
    else return true;
 }
 
+
+void iSetBuy()
+{
+   currTypePosition = BUY;
+            
+   if(testingMode) 
+      test.SendOrder(curr_Price, BUY, countBarsTimeTest, 0, 0, ModeOperation);
+      
+   else SendBuyMarket(curr_Price, Lots);   
+}
+
+void iSetSell()
+{
+   currTypePosition = SELL;
+                  
+   if(testingMode) 
+      test.SendOrder(curr_Price, SELL, countBarsTimeTest, 0, 0, ModeOperation);
+      
+   else SendSellMarket(curr_Price, Lots); 
+}
 
