@@ -64,3 +64,29 @@ void CloseOperationIfLossMoreThan(int maxLoss)
       if(profit < (maxLoss*-1)) trade.PositionClose(ticket);
    }
 }
+
+
+
+enum BinExt_ENUM_OperationType
+{
+   OperationType_NONE,
+   OperationType_Buy,
+   OperationType_Sell
+};
+
+class PlayAlertSignal
+{
+   public:
+      void PlayAlert(BinExt_ENUM_OperationType pOPType = OperationType_NONE);
+      bool PrintLogRegistry;
+};
+
+void PlayAlertSignal::PlayAlert(BinExt_ENUM_OperationType pOPType = OperationType_NONE)
+{
+   if(pOPType == OperationType_NONE) return;
+   
+   PlaySound("alert.wav");
+   
+   if(PrintLogRegistry) 
+      Print("Alert to " + (pOPType == OperationType_Buy  ? "Buy" : "Sell") + " signal.");
+}
