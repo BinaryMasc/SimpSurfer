@@ -22,6 +22,13 @@ enum EMA_PIVOT
    FAST
 };
 
+enum ENUM_ExpertMode
+{
+   ExpertMode_ALERT_MODE = 0,
+   ExpertMode_OPERATION_AND_ALERT_MODE = 1,
+   ExpertMode_OPERATION_MODE = 2
+};
+
 
 input
 double Lots = 1;
@@ -29,10 +36,11 @@ double Lots = 1;
 input bool enableSell = true; // Enable short transactions
 input bool enableBuy = true;  // Enable long transactions
 
+input ENUM_ExpertMode ExpertMode = ExpertMode_OPERATION_MODE;  // Expert mode
+
 input bool ReverseMode = false;  // Reverse Mode
 
-input 
-bool CalculateInNewBar = false;
+/*input bool CalculateInNewBar = false;*/
 
 input bool enablePeriod1 = true; // Enable Period 1 (current) | Recomended let true
 input bool enablePeriod2 = true; // Enable Period 2
@@ -98,6 +106,7 @@ double prev_Price;
 double curr_Price;
 int TimeElapsed;
 MqlDateTime dt_struct;
+PlayAlertSignal  PlayAlert;
 Testing test;
 
 NotOperateHour NotOperationScheduler;
@@ -106,6 +115,9 @@ TYPE_POSITION  currTypePosition;
 
 
 bool  enabledCloseCondition1;
+
+
+bool enableAlertSound;
 
 //---
 
@@ -177,6 +189,11 @@ int OnInit()
     currPeriodForPosition = NONE;
     
     enabledCloseCondition1 = ClosePositionWhenPriceBreakEMASlow;
+    
+    enableAlertSound = ExpertMode == ExpertMode_ALERT_MODE || ExpertMode == ExpertMode_OPERATION_AND_ALERT_MODE;
+    
+    PlayAlert = new PlayAlertSignal();
+    PlayAlert.PrintLogRegistry = !TrainingOptimization;
   
    return(INIT_SUCCEEDED);
 }
@@ -251,14 +268,24 @@ void OnTick()
       {
          if(enableBuy && CheckBuyConditions()) 
          {
-            if(ReverseMode) iSetSell();
-            else iSetBuy();
+            if(ExpertMode > 0)
+            {
+               if(ReverseMode) iSetSell();
+               else iSetBuy();
+            }
+            
+            if(!TrainingOptimization && enableAlertSound) PlayAlert.PlayAlert(OperationType_Buy);
          }
          
          if(enableSell && CheckSellConditions()) 
          {      
-            if(ReverseMode) iSetBuy();
-            else iSetSell();
+            if(ExpertMode > 0)
+            {
+               if(ReverseMode) iSetBuy();
+               else iSetSell();
+            }
+            
+            if(!TrainingOptimization && enableAlertSound) PlayAlert.PlayAlert(OperationType_Sell);
          }
       }
    }
