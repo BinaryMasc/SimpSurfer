@@ -37,6 +37,7 @@ input bool enableSell = true; // Enable short transactions
 input bool enableBuy = true;  // Enable long transactions
 
 input ENUM_ExpertMode ExpertMode = ExpertMode_OPERATION_MODE;  // Expert mode
+input int MinTimeAlert = 1;   // Min Time Alert per Bar
 
 input bool ReverseMode = false;  // Reverse Mode
 
@@ -116,7 +117,7 @@ TYPE_POSITION  currTypePosition;
 
 bool  enabledCloseCondition1;
 
-
+bool alertPlayed; // True if the alert was played in the current bar
 bool enableAlertSound;
 
 //---
@@ -194,6 +195,7 @@ int OnInit()
     
     PlayAlert = new PlayAlertSignal();
     PlayAlert.PrintLogRegistry = !TrainingOptimization;
+    alertPlayed = false;
   
    return(INIT_SUCCEEDED);
 }
@@ -222,6 +224,7 @@ void OnTick()
    
    if (newbar)
    {
+      alertPlayed = false;
       if(ModeOperation == TIME)
       {
          // TimeElapsed = TimeElapsed + 1
@@ -274,7 +277,7 @@ void OnTick()
                else iSetBuy();
             }
             
-            if(!TrainingOptimization && enableAlertSound) PlayAlert.PlayAlert(OperationType_Buy);
+            if(!TrainingOptimization && enableAlertSound && !alertPlayed) { PlayAlert.PlayAlert(OperationType_Buy); alertPlayed = true; }
          }
          
          if(enableSell && CheckSellConditions()) 
@@ -285,7 +288,7 @@ void OnTick()
                else iSetSell();
             }
             
-            if(!TrainingOptimization && enableAlertSound) PlayAlert.PlayAlert(OperationType_Sell);
+            if(!TrainingOptimization && enableAlertSound && !alertPlayed) { PlayAlert.PlayAlert(OperationType_Sell); alertPlayed = true; }
          }
       }
    }
